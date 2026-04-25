@@ -62,6 +62,3 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=6)
 
 
-class SignupRequest(BaseModel):
-    email: str = Field(..., min_length=5)
-    password: str = Field(..., min_length=6)

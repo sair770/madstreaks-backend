@@ -12,7 +12,7 @@ from app.watchlist.manager import AlertManager
 from app.watchlist.notifier import Notifier
 from app.signals.generator import SignalGenerator
 from app.groww.orders import place_order, get_positions
-from app.schemas import TradeCreate, TradeUpdate, AlertCreate, AlertUpdate, BriefingAlert, LoginRequest, SignupRequest
+from app.schemas import TradeCreate, TradeUpdate, AlertCreate, AlertUpdate, BriefingAlert, LoginRequest
 from app.auth import verify_user_token, verify_briefing_api_key
 
 
@@ -148,41 +148,6 @@ async def backend_login(credentials: LoginRequest):
             raise HTTPException(status_code=400, detail=f"Supabase error: {error_msg}")
         else:
             raise HTTPException(status_code=500, detail=f"Auth error: {error_msg}")
-
-
-@app.post("/auth/signup")
-async def backend_signup(credentials: SignupRequest):
-    """
-    Backend signup endpoint for debugging.
-    Frontend currently calls Supabase directly — this is for testing/fallback.
-    """
-    try:
-        response = db.client.auth.sign_up({
-            "email": credentials.email,
-            "password": credentials.password
-        })
-
-        if hasattr(response, 'user') and response.user:
-            user = response.user
-            logger.info(f"User signed up: {user.email}")
-            return {
-                "status": "success",
-                "user_id": user.id,
-                "email": user.email,
-                "message": "Account created successfully"
-            }
-        else:
-            logger.error(f"Unexpected response format: {response}")
-            raise HTTPException(status_code=500, detail="Unexpected auth response")
-
-    except Exception as e:
-        error_msg = str(e)
-        logger.error(f"Signup error: {error_msg}")
-
-        if "already registered" in error_msg.lower():
-            raise HTTPException(status_code=409, detail="Email already registered")
-        else:
-            raise HTTPException(status_code=400, detail=f"Signup error: {error_msg}")
 
 
 @app.get("/health")
