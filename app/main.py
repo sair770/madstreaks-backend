@@ -280,6 +280,79 @@ async def toggle_alert(alert_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============ BRIEFING-TO-ALERTS INTEGRATION ============
+
+@app.post("/alerts/from-briefing")
+async def create_alerts_from_briefing(alerts_data: list[dict], user_id: str = "2d620133-08e5-49c1-ae8b-94e85adf29b1"):
+    """
+    Create multiple alerts from briefing research.
+    Used by nse-briefing, stock-briefing to add alerts for key levels.
+
+    Expected format:
+    [
+        {
+            "symbol": "NIFTY",
+            "alert_type": "above",          # above, below, pct_change
+            "target_price": 24500,
+            "description": "Breakout level",
+            "notes": "Expected to reach 25000 if breakout confirmed"
+        },
+        ...
+    ]
+    """
+    try:
+        created = []
+        skipped = []
+
+        for alert_data in alerts_data:
+            symbol = alert_data.get("symbol")
+            alert_type = alert_data.get("alert_type")
+            target_price = alert_data.get("target_price")
+            description = alert_data.get("description", "")
+            notes = alert_data.get("notes", "")
+
+            # Validate required fields
+            if not all([symbol, alert_type, target_price is not None]):
+                skipped.append({"alert": alert_data, "reason": "missing required fields"})
+                continue
+
+            if alert_type not in ["above", "below", "pct_change"]:
+                skipped.append({"alert": alert_data, "reason": f"invalid alert_type: {alert_type}"})
+                continue
+
+            # Create alert in Supabase
+            try:
+                alert_record = {
+                    "user_id": user_id,
+                    "symbol": symbol,
+                    "alert_type": alert_type,
+                    "target_price": float(target_price),
+                    "is_active": True,
+                    "notify_telegram": True,
+                    "repeat_mode": "one_shot",
+                    "notes": f"{description} — {notes}" if description else notes,
+                }
+                db.client.table("watchlist_alerts").insert(alert_record).execute()
+                created.append({"symbol": symbol, "alert_type": alert_type, "target_price": target_price})
+                logger.info(f"Alert created from briefing: {symbol} {alert_type} {target_price}")
+            except Exception as e:
+                skipped.append({"alert": alert_data, "reason": str(e)})
+
+        # Refresh feed with new symbols
+        if created:
+            await feed_manager.refresh_symbols()
+
+        return {
+            "status": "completed",
+            "created": created,
+            "skipped": skipped,
+            "total": len(created) + len(skipped)
+        }
+    except Exception as e:
+        logger.error(f"Error creating alerts from briefing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=settings.port)
