@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     telegram_bot_token: str
     telegram_chat_id: int
     telegram_channel_id: int
-    telegram_trades_group_id: int
-    telegram_alerts_group_id: int
+    telegram_trades_group_id: int = -1003900768357  # Default: Trades/Watchlist Ops group
+    telegram_alerts_group_id: int = -1003931224495  # Default: Alerts group
     supabase_url: str
     supabase_service_key: str
     supabase_publishable_key: str = ""  # Optional - not used by backend
