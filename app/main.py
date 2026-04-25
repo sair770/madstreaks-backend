@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -283,10 +283,17 @@ async def toggle_alert(alert_id: str):
 # ============ BRIEFING-TO-ALERTS INTEGRATION ============
 
 @app.post("/alerts/from-briefing")
-async def create_alerts_from_briefing(alerts_data: list[dict], user_id: str = "2d620133-08e5-49c1-ae8b-94e85adf29b1"):
+async def create_alerts_from_briefing(
+    alerts_data: list[dict],
+    user_id: str = "2d620133-08e5-49c1-ae8b-94e85adf29b1",
+    authorization: str = Header(None)
+):
     """
     Create multiple alerts from briefing research.
     Used by nse-briefing, stock-briefing to add alerts for key levels.
+
+    **Authentication:** Pass API key in Authorization header
+    Example: Authorization: Bearer sk-briefing-xxx
 
     Expected format:
     [
@@ -300,6 +307,22 @@ async def create_alerts_from_briefing(alerts_data: list[dict], user_id: str = "2
         ...
     ]
     """
+    # Validate API key
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    # Extract token from "Bearer sk-briefing-xxx"
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0] != "Bearer":
+        raise HTTPException(status_code=401, detail="Invalid Authorization format. Use: Bearer <api-key>")
+
+    api_key = parts[1]
+    if api_key != settings.briefing_api_key:
+        logger.warning(f"Invalid briefing API key attempted: {api_key[:10]}...")
+        raise HTTPException(status_code=403, detail="Invalid API key")
+
+    logger.info(f"Briefing API authenticated - creating {len(alerts_data)} alerts")
+
     try:
         created = []
         skipped = []

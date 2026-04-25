@@ -32,8 +32,19 @@ import json
 
 
 class BriefingAlertHelper:
-    def __init__(self, backend_url: str = "http://localhost:8000"):
+    def __init__(self, backend_url: str = "http://localhost:8000", api_key: str = None):
         self.backend_url = backend_url.rstrip("/")
+        self.api_key = api_key or self._get_api_key_from_env()
+
+        if not self.api_key:
+            raise ValueError(
+                "API key required. Pass api_key parameter or set BRIEFING_API_KEY env var"
+            )
+
+    @staticmethod
+    def _get_api_key_from_env() -> str | None:
+        import os
+        return os.getenv("BRIEFING_API_KEY")
 
     def create_alerts_from_research(
         self,
@@ -57,10 +68,16 @@ class BriefingAlertHelper:
             Response dict with "created" and "skipped" lists
         """
         try:
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+
             response = httpx.post(
                 f"{self.backend_url}/alerts/from-briefing",
                 json=alerts,
                 params={"user_id": user_id},
+                headers=headers,
                 timeout=10
             )
             response.raise_for_status()
@@ -84,7 +101,10 @@ class BriefingAlertHelper:
 
 # Example: Using in nse-briefing workflow
 if __name__ == "__main__":
-    helper = BriefingAlertHelper(backend_url="http://localhost:8000")
+    helper = BriefingAlertHelper(
+        backend_url="http://localhost:8000",
+        api_key="sk-briefing-dev-key-change-in-prod"  # or set BRIEFING_API_KEY env var
+    )
 
     # Example research findings
     research_alerts = [

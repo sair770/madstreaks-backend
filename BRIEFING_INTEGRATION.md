@@ -26,6 +26,19 @@ Price hits level → Telegram alert sent
 
 **POST** `https://web-production-f47c1.up.railway.app/alerts/from-briefing`
 
+### Authentication
+
+All requests require an API key in the `Authorization` header:
+
+```
+Authorization: Bearer sk-briefing-xxxxx
+```
+
+Responses:
+- `401 Unauthorized` - Missing or invalid header format
+- `403 Forbidden` - Wrong API key
+- `200 OK` - Valid request
+
 ### Request Body
 
 ```json
@@ -91,9 +104,15 @@ alerts = [
     }
 ]
 
+headers = {
+    "Authorization": "Bearer sk-briefing-xxxxx",  # Get from environment or config
+    "Content-Type": "application/json"
+}
+
 response = httpx.post(
     "https://web-production-f47c1.up.railway.app/alerts/from-briefing",
     json=alerts,
+    headers=headers,
     timeout=10
 )
 print(response.json())
@@ -101,11 +120,18 @@ print(response.json())
 
 ### Option 2: Using Helper Class (Recommended)
 
+**Setup (once):**
+```bash
+export BRIEFING_API_KEY="sk-briefing-xxxxx"
+```
+
+**Usage:**
 ```python
 from briefing_alerts_helper import BriefingAlertHelper
 
 helper = BriefingAlertHelper(
     backend_url="https://web-production-f47c1.up.railway.app"
+    # api_key auto-loads from BRIEFING_API_KEY env var
 )
 
 alerts = [
