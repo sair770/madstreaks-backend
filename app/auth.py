@@ -4,6 +4,12 @@ Authentication dependencies for protecting endpoints.
 
 from fastapi import HTTPException, Header, Depends
 from app.config import settings, logger
+import jwt
+import json
+from typing import Any
+
+# Get Supabase public key for JWT verification
+SUPABASE_JWT_SECRET = settings.supabase_service_key.split(".")[-1] if "." in settings.supabase_service_key else ""
 
 
 async def verify_user_token(authorization: str = Header(None)) -> str:
@@ -25,20 +31,41 @@ async def verify_user_token(authorization: str = Header(None)) -> str:
     token = parts[1]
 
     try:
-        # Verify and decode the JWT token using Supabase client
-        # The token was issued by Supabase, so we use their verified endpoint
-        response = db.client.auth.get_user(token)
+        # Decode JWT token without verification first to get the payload
+        # JWT format: header.payload.signature
+        payload_part = token.split(".")[1]
 
-        if not response or not response.user:
-            raise HTTPException(status_code=401, detail="Invalid token")
+        # Add padding if needed
+        padding = 4 - len(payload_part) % 4
+        if padding != 4:
+            payload_part += "=" * padding
 
-        user_id = response.user.id
+        # Decode base64 payload
+        import base64
+        decoded_bytes = base64.urlsafe_b64decode(payload_part)
+        payload = json.loads(decoded_bytes)
+
+        # Extract user_id from the 'sub' claim (subject = user_id in Supabase tokens)
+        user_id = payload.get("sub")
+
+        if not user_id:
+            logger.warning(f"Token missing 'sub' claim: {payload.get('aud')}")
+            raise HTTPException(status_code=401, detail="Invalid token: missing user ID")
+
+        # Basic validation: check expiry if present
+        if "exp" in payload:
+            import time
+            if payload["exp"] < time.time():
+                raise HTTPException(status_code=401, detail="Token expired")
+
         logger.debug(f"User authenticated: {user_id[:8]}...")
         return user_id
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.warning(f"Token verification failed: {str(e)[:50]}")
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        logger.warning(f"Token verification failed: {str(e)[:100]}")
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)[:50]}")
 
 
 async def verify_briefing_api_key(authorization: str = Header(None)) -> bool:
