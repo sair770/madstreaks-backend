@@ -113,6 +113,164 @@ async def post_signal(symbol: str, direction: str, entry: float, target: float, 
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============ TRADES CRUD ============
+
+@app.get("/trades")
+async def list_trades(user_id: str = None):
+    try:
+        if user_id:
+            response = db.client.table("trades").select("*").eq("user_id", user_id).order("created_at", ascending=False).execute()
+        else:
+            response = db.client.table("trades").select("*").order("created_at", ascending=False).execute()
+        return {"trades": response.data}
+    except Exception as e:
+        logger.error(f"Error listing trades: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/trades")
+async def create_trade(trade_data: dict):
+    try:
+        db.client.table("trades").insert(trade_data).execute()
+        return {"status": "created"}
+    except Exception as e:
+        logger.error(f"Error creating trade: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/trades/{trade_id}")
+async def get_trade(trade_id: str):
+    try:
+        response = db.client.table("trades").select("*").eq("id", trade_id).single().execute()
+        return {"trade": response.data}
+    except Exception as e:
+        logger.error(f"Error fetching trade: {e}")
+        raise HTTPException(status_code=404, detail="Trade not found")
+
+
+@app.put("/trades/{trade_id}")
+async def update_trade(trade_id: str, updates: dict):
+    try:
+        db.client.table("trades").update(updates).eq("id", trade_id).execute()
+        return {"status": "updated"}
+    except Exception as e:
+        logger.error(f"Error updating trade: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/trades/{trade_id}")
+async def delete_trade(trade_id: str):
+    try:
+        db.client.table("trades").delete().eq("id", trade_id).execute()
+        return {"status": "deleted"}
+    except Exception as e:
+        logger.error(f"Error deleting trade: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/trades/{trade_id}/close")
+async def close_trade(trade_id: str, exit_price: float, pnl: float, status: str = "closed"):
+    try:
+        db.client.table("trades").update({
+            "exit_price": exit_price,
+            "pnl": pnl,
+            "status": status
+        }).eq("id", trade_id).execute()
+        return {"status": "closed"}
+    except Exception as e:
+        logger.error(f"Error closing trade: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ WATCHLIST ALERTS CRUD ============
+
+@app.get("/alerts")
+async def list_alerts(user_id: str = None, active_only: bool = True):
+    try:
+        query = db.client.table("watchlist_alerts").select("*")
+        if user_id:
+            query = query.eq("user_id", user_id)
+        if active_only:
+            query = query.eq("is_active", True)
+        response = query.order("created_at", ascending=False).execute()
+        return {"alerts": response.data}
+    except Exception as e:
+        logger.error(f"Error listing alerts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/alerts")
+async def create_alert(alert_data: dict):
+    try:
+        db.client.table("watchlist_alerts").insert(alert_data).execute()
+        await feed_manager.refresh_symbols()
+        return {"status": "created"}
+    except Exception as e:
+        logger.error(f"Error creating alert: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/alerts/{alert_id}")
+async def get_alert(alert_id: str):
+    try:
+        response = db.client.table("watchlist_alerts").select("*").eq("id", alert_id).single().execute()
+        return {"alert": response.data}
+    except Exception as e:
+        logger.error(f"Error fetching alert: {e}")
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+
+@app.put("/alerts/{alert_id}")
+async def update_alert(alert_id: str, updates: dict):
+    try:
+        db.client.table("watchlist_alerts").update(updates).eq("id", alert_id).execute()
+        await feed_manager.refresh_symbols()
+        return {"status": "updated"}
+    except Exception as e:
+        logger.error(f"Error updating alert: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/alerts/{alert_id}")
+async def delete_alert(alert_id: str):
+    try:
+        db.client.table("watchlist_alerts").delete().eq("id", alert_id).execute()
+        await feed_manager.refresh_symbols()
+        return {"status": "deleted"}
+    except Exception as e:
+        logger.error(f"Error deleting alert: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/alerts/{alert_id}/reset")
+async def reset_alert(alert_id: str):
+    try:
+        db.client.table("watchlist_alerts").update({
+            "alert_triggered": False,
+            "alert_sent_at": None
+        }).eq("id", alert_id).execute()
+        return {"status": "reset"}
+    except Exception as e:
+        logger.error(f"Error resetting alert: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/alerts/{alert_id}/toggle")
+async def toggle_alert(alert_id: str):
+    try:
+        alert = await db.get_alert_by_id(alert_id)
+        if not alert:
+            raise HTTPException(status_code=404, detail="Alert not found")
+        db.client.table("watchlist_alerts").update({
+            "is_active": not alert.get("is_active")
+        }).eq("id", alert_id).execute()
+        await feed_manager.refresh_symbols()
+        return {"status": "toggled", "is_active": not alert.get("is_active")}
+    except Exception as e:
+        logger.error(f"Error toggling alert: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=settings.port)
