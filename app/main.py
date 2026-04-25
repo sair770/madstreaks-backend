@@ -272,6 +272,16 @@ async def create_trade(
         trade_data["user_id"] = user_id
         db.client.table("trades").insert(trade_data).execute()
         logger.info(f"Trade created for user {user_id}: {trade.symbol}")
+
+        # Send notification to trades ops group
+        await telegram_bot.send_trade_notification(
+            symbol=trade.symbol,
+            entry_price=trade.entry_price,
+            trade_type=trade.trade_type,
+            target=trade.target_price,
+            stop_loss=trade.stop_loss
+        )
+
         return {"status": "created"}
     except Exception as e:
         logger.error(f"Error creating trade: {e}")
@@ -356,6 +366,14 @@ async def create_alert(
         db.client.table("watchlist_alerts").insert(alert_data).execute()
         await feed_manager.refresh_symbols()
         logger.info(f"Alert created for user {user_id}: {alert.symbol}")
+
+        # Send notification to trades ops group
+        await telegram_bot.send_alert_notification(
+            symbol=alert.symbol,
+            alert_type=alert.alert_type,
+            target_price=alert.target_price
+        )
+
         return {"status": "created"}
     except Exception as e:
         logger.error(f"Error creating alert: {e}")
