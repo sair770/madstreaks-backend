@@ -1,30 +1,182 @@
 INFO:     Will watch for changes in these directories: ['/Users/sairam/madstreaks-backend']
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [80659] using WatchFiles
-2026-04-25 15:20:14,983 — app.config — INFO — Supabase client initialized
+INFO:     Started reloader process [81523] using WatchFiles
+2026-04-25 15:34:56,140 — app.config — INFO — Supabase client initialized
 Ready to Groww!
-2026-04-25 15:20:15,370 — app.config — INFO — Groww API client initialized
-2026-04-25 15:20:15,440 — app.config — INFO — Telegram bot initialized
-INFO:     Started server process [80662]
+2026-04-25 15:34:56,464 — app.config — INFO — Groww API client initialized
+2026-04-25 15:34:56,638 — app.config — INFO — Telegram bot initialized
+INFO:     Started server process [81526]
 INFO:     Waiting for application startup.
-2026-04-25 15:20:15,454 — app.config — INFO — 🚀 Starting madstreaks-backend
-2026-04-25 15:20:15,454 — app.config — INFO — Starting Telegram bot polling
-2026-04-25 15:20:15,933 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/getMe "HTTP/1.1 200 OK"
-2026-04-25 15:20:15,935 — telegram.ext.Application — INFO — Application started
-2026-04-25 15:20:16,096 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/deleteWebhook "HTTP/1.1 200 OK"
-2026-04-25 15:20:16,097 — app.config — INFO — ✅ Telegram bot started
-2026-04-25 15:20:16,098 — app.config — INFO — Starting Groww feed manager
-2026-04-25 15:20:16,098 — app.config — INFO — ✅ Groww feed started
-2026-04-25 15:20:16,271 — app.config — ERROR — Error in feed loop: Cannot run the event loop while another loop is running
+2026-04-25 15:34:56,655 — app.config — INFO — 🚀 Starting madstreaks-backend
+2026-04-25 15:34:56,655 — app.config — INFO — Starting Telegram bot polling
+2026-04-25 15:34:57,135 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/getMe "HTTP/1.1 200 OK"
+2026-04-25 15:34:57,137 — telegram.ext.Application — INFO — Application started
+2026-04-25 15:34:57,294 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/deleteWebhook "HTTP/1.1 200 OK"
+2026-04-25 15:34:57,295 — app.config — INFO — ✅ Telegram bot started
+2026-04-25 15:34:57,295 — app.config — INFO — Starting Groww feed manager
+2026-04-25 15:34:57,296 — app.config — INFO — ✅ Groww feed started
+2026-04-25 15:34:57,457 — app.config — ERROR — Error in feed loop: Cannot run the event loop while another loop is running
 /Users/sairam/madstreaks-backend/app/groww/feed.py:47: RuntimeWarning: coroutine 'NatsClient._connect' was never awaited
   self.is_running = False
 RuntimeWarning: Enable tracemalloc to get the object allocation traceback
 INFO:     Application startup complete.
-2026-04-25 15:20:18,668 — httpx — INFO — HTTP Request: GET https://nrppxfdspgsjuthahbju.supabase.co/rest/v1/watchlist_alerts?select=%2A&is_active=eq.True "HTTP/2 200 OK"
-INFO:     127.0.0.1:51310 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51340 - "GET / HTTP/1.1" 200 OK
-2026-04-25 15:20:25,222 — httpx — INFO — HTTP Request: GET https://nrppxfdspgsjuthahbju.supabase.co/rest/v1/watchlist_alerts?select=%2A&is_active=eq.True "HTTP/2 200 OK"
-INFO:     127.0.0.1:51341 - "GET /watchlist HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51343 - "HEAD /docs HTTP/1.1" 200 OK
-2026-04-25 15:20:26,750 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/getUpdates "HTTP/1.1 200 OK"
-2026-04-25 15:20:36,911 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/getUpdates "HTTP/1.1 200 OK"
+2026-04-25 15:34:59,696 — app.config — ERROR — Error listing alerts: BaseSelectRequestBuilder.order() got an unexpected keyword argument 'ascending'
+INFO:     127.0.0.1:55037 - "GET /alerts HTTP/1.1" 500 Internal Server Error
+2026-04-25 15:35:04,144 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/getUpdates "HTTP/1.1 409 Conflict"
+2026-04-25 15:35:04,145 — telegram.ext.Updater — ERROR — Exception happened while polling for updates.
+Traceback (most recent call last):
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+    await do_action()
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+    action_cb_task.result()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/ext/_extbot.py", line 672, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/_bot.py", line 4865, in get_updates
+    await self._post(
+    ^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+    ),
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/_bot.py", line 704, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/ext/_extbot.py", line 370, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/_bot.py", line 733, in _do_post
+    result = await request.post(
+             ^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/request/_baserequest.py", line 198, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+    raise exception
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+WARNING:  WatchFiles detected changes in 'app/main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-04-25 15:35:04,434 — app.config — INFO — 🛑 Shutting down
+2026-04-25 15:35:04,434 — app.config — INFO — Stopping Groww feed manager
+2026-04-25 15:35:04,434 — app.config — INFO — Stopping Telegram bot
+2026-04-25 15:35:08,616 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/getUpdates "HTTP/1.1 200 OK"
+2026-04-25 15:35:08,617 — telegram.ext.Application — INFO — Application is stopping. This might take a moment.
+2026-04-25 15:35:08,617 — telegram.ext.Application — INFO — Application.stop() complete
+2026-04-25 15:35:08,618 — app.config — INFO — ✅ Shutdown complete
+INFO:     Application shutdown complete.
+INFO:     Finished server process [81526]
+2026-04-25 15:35:09,102 — app.config — INFO — Supabase client initialized
+Ready to Groww!
+2026-04-25 15:35:09,417 — app.config — INFO — Groww API client initialized
+2026-04-25 15:35:09,474 — app.config — INFO — Telegram bot initialized
+INFO:     Started server process [81546]
+INFO:     Waiting for application startup.
+2026-04-25 15:35:09,486 — app.config — INFO — 🚀 Starting madstreaks-backend
+2026-04-25 15:35:09,486 — app.config — INFO — Starting Telegram bot polling
+2026-04-25 15:35:09,970 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/getMe "HTTP/1.1 200 OK"
+2026-04-25 15:35:09,971 — telegram.ext.Application — INFO — Application started
+2026-04-25 15:35:10,130 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/deleteWebhook "HTTP/1.1 200 OK"
+2026-04-25 15:35:10,132 — app.config — INFO — ✅ Telegram bot started
+2026-04-25 15:35:10,132 — app.config — INFO — Starting Groww feed manager
+2026-04-25 15:35:10,132 — app.config — INFO — ✅ Groww feed started
+2026-04-25 15:35:10,335 — app.config — ERROR — Error in feed loop: Cannot run the event loop while another loop is running
+/Users/sairam/madstreaks-backend/app/groww/feed.py:47: RuntimeWarning: coroutine 'NatsClient._connect' was never awaited
+  self.is_running = False
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+INFO:     Application startup complete.
+2026-04-25 15:35:12,372 — httpx — INFO — HTTP Request: GET https://nrppxfdspgsjuthahbju.supabase.co/rest/v1/watchlist_alerts?select=%2A&is_active=eq.True&order=created_at.desc "HTTP/2 200 OK"
+INFO:     127.0.0.1:55080 - "GET /alerts HTTP/1.1" 200 OK
+2026-04-25 15:35:17,801 — httpx — INFO — HTTP Request: POST https://nrppxfdspgsjuthahbju.supabase.co/rest/v1/watchlist_alerts "HTTP/2 201 Created"
+2026-04-25 15:35:17,802 — app.config — INFO — Refreshing monitored symbols
+2026-04-25 15:35:17,802 — app.config — INFO — Stopping Groww feed manager
+2026-04-25 15:35:18,414 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/getUpdates "HTTP/1.1 409 Conflict"
+2026-04-25 15:35:18,416 — telegram.ext.Updater — ERROR — Exception happened while polling for updates.
+Traceback (most recent call last):
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/ext/_utils/networkloop.py", line 161, in network_retry_loop
+    await do_action()
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/ext/_utils/networkloop.py", line 154, in do_action
+    action_cb_task.result()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/ext/_updater.py", line 340, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/ext/_extbot.py", line 672, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/_bot.py", line 4865, in get_updates
+    await self._post(
+    ^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+    ),
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/_bot.py", line 704, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/ext/_extbot.py", line 370, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/_bot.py", line 733, in _do_post
+    result = await request.post(
+             ^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/request/_baserequest.py", line 198, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+    )
+    ^
+  File "/Users/sairam/madstreaks-backend/venv/lib/python3.14/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+    raise exception
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+2026-04-25 15:35:18,804 — app.config — INFO — Starting Groww feed manager
+INFO:     127.0.0.1:55117 - "POST /alerts HTTP/1.1" 200 OK
+2026-04-25 15:35:18,972 — app.config — ERROR — Error in feed loop: Cannot run the event loop while another loop is running
+2026-04-25 15:35:19,095 — httpx — INFO — HTTP Request: GET https://nrppxfdspgsjuthahbju.supabase.co/rest/v1/watchlist_alerts?select=%2A&is_active=eq.True&order=created_at.desc "HTTP/2 200 OK"
+INFO:     127.0.0.1:55124 - "GET /alerts HTTP/1.1" 200 OK
+2026-04-25 15:35:25,503 — httpx — INFO — HTTP Request: PATCH https://nrppxfdspgsjuthahbju.supabase.co/rest/v1/watchlist_alerts?id=eq.b5d02ad9-f202-48f7-afe9-7290f67dde73 "HTTP/2 200 OK"
+INFO:     127.0.0.1:55149 - "POST /alerts/b5d02ad9-f202-48f7-afe9-7290f67dde73/reset HTTP/1.1" 200 OK
+2026-04-25 15:35:25,663 — httpx — INFO — HTTP Request: GET https://nrppxfdspgsjuthahbju.supabase.co/rest/v1/watchlist_alerts?select=%2A&id=eq.b5d02ad9-f202-48f7-afe9-7290f67dde73 "HTTP/2 200 OK"
+2026-04-25 15:35:25,790 — httpx — INFO — HTTP Request: PATCH https://nrppxfdspgsjuthahbju.supabase.co/rest/v1/watchlist_alerts?id=eq.b5d02ad9-f202-48f7-afe9-7290f67dde73 "HTTP/2 200 OK"
+2026-04-25 15:35:25,791 — app.config — INFO — Refreshing monitored symbols
+2026-04-25 15:35:25,791 — app.config — INFO — Stopping Groww feed manager
+2026-04-25 15:35:26,792 — app.config — INFO — Starting Groww feed manager
+INFO:     127.0.0.1:55155 - "POST /alerts/b5d02ad9-f202-48f7-afe9-7290f67dde73/toggle HTTP/1.1" 200 OK
+2026-04-25 15:35:26,963 — app.config — ERROR — Error in feed loop: Cannot run the event loop while another loop is running
+2026-04-25 15:35:27,089 — httpx — INFO — HTTP Request: GET https://nrppxfdspgsjuthahbju.supabase.co/rest/v1/watchlist_alerts?select=%2A&id=eq.b5d02ad9-f202-48f7-afe9-7290f67dde73 "HTTP/2 200 OK"
+INFO:     127.0.0.1:55161 - "GET /alerts/b5d02ad9-f202-48f7-afe9-7290f67dde73 HTTP/1.1" 200 OK

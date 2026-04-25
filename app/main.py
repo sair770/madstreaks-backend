@@ -119,9 +119,9 @@ async def post_signal(symbol: str, direction: str, entry: float, target: float, 
 async def list_trades(user_id: str = None):
     try:
         if user_id:
-            response = db.client.table("trades").select("*").eq("user_id", user_id).order("created_at", ascending=False).execute()
+            response = db.client.table("trades").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
         else:
-            response = db.client.table("trades").select("*").order("created_at", ascending=False).execute()
+            response = db.client.table("trades").select("*").order("created_at", desc=True).execute()
         return {"trades": response.data}
     except Exception as e:
         logger.error(f"Error listing trades: {e}")
@@ -192,7 +192,7 @@ async def list_alerts(user_id: str = None, active_only: bool = True):
             query = query.eq("user_id", user_id)
         if active_only:
             query = query.eq("is_active", True)
-        response = query.order("created_at", ascending=False).execute()
+        response = query.order("created_at", desc=True).execute()
         return {"alerts": response.data}
     except Exception as e:
         logger.error(f"Error listing alerts: {e}")
