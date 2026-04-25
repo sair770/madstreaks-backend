@@ -1,16 +1,41 @@
+import pyotp
 from growwapi import GrowwAPI
 from app.config import settings, logger
 
 
 class GrowwClient:
     def __init__(self):
-        self.api = GrowwAPI(settings.groww_api_key)
-        logger.info("Groww API client initialized")
+        try:
+            # Get access token using API key + secret
+            token_response = GrowwAPI.get_access_token(
+                api_key=settings.groww_api_key,
+                secret=settings.groww_api_secret
+            )
+
+            # token_response can be dict or string
+            if isinstance(token_response, dict):
+                access_token = token_response.get("access_token")
+            else:
+                access_token = token_response
+
+            if not access_token:
+                raise ValueError(f"No access token in response: {token_response}")
+
+            logger.info("Got access token from Groww")
+
+            # Initialize API with access token
+            self.api = GrowwAPI(access_token)
+            logger.info("✅ Groww API authenticated")
+        except Exception as e:
+            logger.error(f"❌ Failed to authenticate with Groww: {e}")
+            raise
 
     async def get_ltp(self, symbol: str) -> float | None:
         try:
             data = self.api.get_quote(symbol)
-            return data.get("ltp")
+            if isinstance(data, dict):
+                return data.get("ltp")
+            return None
         except Exception as e:
             logger.error(f"Error fetching LTP for {symbol}: {e}")
             return None

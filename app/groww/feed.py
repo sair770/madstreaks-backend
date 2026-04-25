@@ -37,18 +37,43 @@ class FeedManager:
             logger.info(f"Subscribing to Groww feed for {len(symbols)} symbols: {symbols}")
 
             self.feed = GrowwFeed(self.groww.api)
-            instruments = [
-                {"exchange": "NSE", "segment": "CASH", "exchange_token": symbol}
-                for symbol in symbols
-            ]
 
-            self.feed.subscribe_ltp(
+            # Convert symbol names to exchange tokens
+            instruments = []
+            for symbol in symbols:
+                try:
+                    instrument = self.groww.api.get_instrument_by_exchange_and_trading_symbol(
+                        exchange="NSE",
+                        trading_symbol=symbol
+                    )
+                    if instrument:
+                        exchange_token = instrument.get("exchange_token") or instrument.get("token")
+                        instruments.append({
+                            "exchange": "NSE",
+                            "segment": "CASH",
+                            "exchange_token": str(exchange_token)
+                        })
+                        logger.info(f"Found token for {symbol}: {exchange_token}")
+                    else:
+                        logger.warning(f"Could not find exchange token for {symbol}")
+                except Exception as e:
+                    logger.warning(f"Error getting token for {symbol}: {e}")
+
+            if not instruments:
+                logger.error("No valid instruments to subscribe to")
+                return
+
+            logger.info(f"Calling feed.subscribe_ltp() with {len(instruments)} instruments")
+            result = self.feed.subscribe_ltp(
                 instruments,
                 on_data_received=self._on_price_tick
             )
-
+            logger.info(f"subscribe_ltp result: {result}")
+            logger.info(f"Subscribed to {len(instruments)} instruments: {instruments}")
+            logger.info("Starting feed.consume() - waiting for price ticks...")
             # This is blocking, runs in thread
             self.feed.consume()
+            logger.warning("feed.consume() exited")
 
         except Exception as e:
             logger.error(f"Error in Groww feed thread: {e}")
@@ -60,7 +85,10 @@ class FeedManager:
                 return
 
             prices = self.feed.get_ltp()
-            logger.debug(f"Price tick received: {prices}")
+            if prices:
+                logger.info(f"💰 Price tick received: {prices}")
+            else:
+                logger.warning("Price tick but no prices returned")
 
             # Schedule check in main event loop
             loop = asyncio.get_event_loop()
