@@ -8,32 +8,37 @@ from app.config import settings, logger
 
 async def verify_user_token(authorization: str = Header(None)) -> str:
     """
-    Verify user authentication token.
-    Returns user_id if valid.
-
-    For MVP: Accept any valid user_id format (UUID).
-    TODO: Integrate with JWT/session tokens from frontend auth.
+    Verify Supabase JWT token from Authorization header.
+    Returns user_id (UUID) from the token.
     """
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
 
-    # Extract token from "Bearer <user-id>"
+    # Extract token from "Bearer <jwt_token>"
     parts = authorization.split()
     if len(parts) != 2 or parts[0] != "Bearer":
         raise HTTPException(
             status_code=401,
-            detail="Invalid Authorization format. Use: Bearer <user-id>"
+            detail="Invalid Authorization format. Use: Bearer <token>"
         )
 
-    user_id = parts[1]
+    token = parts[1]
 
-    # Basic validation: should be UUID format (36 chars with hyphens)
-    if len(user_id) != 36 or user_id.count("-") != 4:
-        logger.warning(f"Invalid user_id format attempted: {user_id[:20]}...")
-        raise HTTPException(status_code=401, detail="Invalid user token format")
+    try:
+        # Verify and decode the JWT token using Supabase client
+        # The token was issued by Supabase, so we use their verified endpoint
+        response = db.client.auth.get_user(token)
 
-    logger.debug(f"User authenticated: {user_id[:8]}...")
-    return user_id
+        if not response or not response.user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        user_id = response.user.id
+        logger.debug(f"User authenticated: {user_id[:8]}...")
+        return user_id
+
+    except Exception as e:
+        logger.warning(f"Token verification failed: {str(e)[:50]}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 async def verify_briefing_api_key(authorization: str = Header(None)) -> bool:
