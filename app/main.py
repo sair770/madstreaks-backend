@@ -68,31 +68,46 @@ async def root():
 
 @app.get("/auth/debug")
 async def auth_debug():
-    """Debug endpoint to verify Supabase auth configuration."""
+    """Debug endpoint - tests JWT decoding with a real token."""
+    return {
+        "status": "ok",
+        "message": "POST a JSON with 'token' field to test JWT decoding",
+        "example": {"token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9..."}
+    }
+
+
+@app.post("/auth/debug")
+async def auth_debug_token(body: dict):
+    """Debug JWT token decoding."""
+    token = body.get("token")
+    if not token:
+        raise HTTPException(status_code=400, detail="Missing 'token' field")
+
     try:
-        # Test if we can reach Supabase
-        response = db.client.auth.get_session()
+        import json
+        import base64
+
+        token_parts = token.split(".")
+        if len(token_parts) != 3:
+            return {"error": f"Token has {len(token_parts)} parts instead of 3"}
+
+        payload_part = token_parts[1]
+        padding = 4 - len(payload_part) % 4
+        if padding != 4:
+            payload_part += "=" * padding
+
+        decoded_bytes = base64.urlsafe_b64decode(payload_part)
+        payload = json.loads(decoded_bytes)
+
         return {
-            "status": "ok",
-            "supabase_url": settings.supabase_url,
-            "message": "Supabase is reachable. Frontend should be calling Supabase auth directly.",
-            "debug_info": {
-                "auth_enabled": True,
-                "next_steps": [
-                    "1. Open browser DevTools → Network tab",
-                    "2. Try logging in with email/password",
-                    "3. Look for POST request to /auth/v1/token",
-                    "4. Check the response body for error details",
-                    "5. Common issues: email verification required, wrong credentials"
-                ]
-            }
+            "status": "✅ Decoded successfully",
+            "user_id": payload.get("sub"),
+            "email": payload.get("email"),
+            "exp": payload.get("exp"),
+            "all_claims": list(payload.keys())
         }
     except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e),
-            "supabase_url": settings.supabase_url
-        }
+        return {"error": str(e), "type": type(e).__name__}
 
 
 # ============ AUTH ENDPOINTS (BACKEND-DRIVEN) ============

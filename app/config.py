@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     telegram_channel_id: int
     supabase_url: str
     supabase_service_key: str
+    supabase_publishable_key: str = ""  # Optional - not used by backend
     briefing_api_key: str = "sk-briefing-dev-key-change-in-prod"
     port: int = 8000
     env: str = "production"
@@ -19,6 +20,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"  # Ignore extra environment variables
 
 
 settings = Settings()
