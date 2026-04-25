@@ -12,7 +12,7 @@ from app.watchlist.manager import AlertManager
 from app.watchlist.notifier import Notifier
 from app.signals.generator import SignalGenerator
 from app.groww.orders import place_order, get_positions
-from app.schemas import TradeCreate, TradeUpdate, AlertCreate, AlertUpdate, BriefingAlert
+from app.schemas import TradeCreate, TradeUpdate, AlertCreate, AlertUpdate, BriefingAlert, LoginRequest, SignupRequest
 from app.auth import verify_user_token, verify_briefing_api_key
 
 
@@ -64,6 +64,110 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "Madstreaks backend is running", "version": "1.0.0"}
+
+
+@app.get("/auth/debug")
+async def auth_debug():
+    """Debug endpoint to verify Supabase auth configuration."""
+    try:
+        # Test if we can reach Supabase
+        response = db.client.auth.get_session()
+        return {
+            "status": "ok",
+            "supabase_url": settings.supabase_url,
+            "message": "Supabase is reachable. Frontend should be calling Supabase auth directly.",
+            "debug_info": {
+                "auth_enabled": True,
+                "next_steps": [
+                    "1. Open browser DevTools → Network tab",
+                    "2. Try logging in with email/password",
+                    "3. Look for POST request to /auth/v1/token",
+                    "4. Check the response body for error details",
+                    "5. Common issues: email verification required, wrong credentials"
+                ]
+            }
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "supabase_url": settings.supabase_url
+        }
+
+
+# ============ AUTH ENDPOINTS (BACKEND-DRIVEN) ============
+
+@app.post("/auth/login")
+async def backend_login(credentials: LoginRequest):
+    """
+    Backend login endpoint for debugging.
+    Frontend currently calls Supabase directly — this is for testing/fallback.
+    """
+    try:
+        response = db.client.auth.sign_in_with_password({
+            "email": credentials.email,
+            "password": credentials.password
+        })
+
+        if hasattr(response, 'user') and response.user:
+            user = response.user
+            return {
+                "status": "success",
+                "user_id": user.id,
+                "email": user.email,
+                "message": "Login successful"
+            }
+        else:
+            logger.error(f"Unexpected response format: {response}")
+            raise HTTPException(status_code=500, detail="Unexpected auth response")
+
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Login error: {error_msg}")
+
+        if "invalid login credentials" in error_msg.lower():
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        elif "email not confirmed" in error_msg.lower():
+            raise HTTPException(status_code=403, detail="Email confirmation required — check your inbox")
+        elif "400" in error_msg:
+            raise HTTPException(status_code=400, detail=f"Supabase error: {error_msg}")
+        else:
+            raise HTTPException(status_code=500, detail=f"Auth error: {error_msg}")
+
+
+@app.post("/auth/signup")
+async def backend_signup(credentials: SignupRequest):
+    """
+    Backend signup endpoint for debugging.
+    Frontend currently calls Supabase directly — this is for testing/fallback.
+    """
+    try:
+        response = db.client.auth.sign_up({
+            "email": credentials.email,
+            "password": credentials.password
+        })
+
+        if hasattr(response, 'user') and response.user:
+            user = response.user
+            logger.info(f"User signed up: {user.email}")
+            return {
+                "status": "success",
+                "user_id": user.id,
+                "email": user.email,
+                "message": "Account created successfully"
+            }
+        else:
+            logger.error(f"Unexpected response format: {response}")
+            raise HTTPException(status_code=500, detail="Unexpected auth response")
+
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Signup error: {error_msg}")
+
+        if "already registered" in error_msg.lower():
+            raise HTTPException(status_code=409, detail="Email already registered")
+        else:
+            raise HTTPException(status_code=400, detail=f"Signup error: {error_msg}")
 
 
 @app.get("/health")

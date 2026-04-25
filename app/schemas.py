@@ -55,3 +55,13 @@ class BriefingAlert(BaseModel):
     target_price: float = Field(..., gt=0)
     description: Optional[str] = Field(None, max_length=200)
     notes: Optional[str] = Field(None, max_length=500)
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., min_length=5)
+    password: str = Field(..., min_length=6)
+
+
+class SignupRequest(BaseModel):
+    email: str = Field(..., min_length=5)
+    password: str = Field(..., min_length=6)
