@@ -4,12 +4,10 @@ Authentication dependencies for protecting endpoints.
 
 from fastapi import HTTPException, Header, Depends
 from app.config import settings, logger
-import jwt
 import json
+import base64
+import time
 from typing import Any
-
-# Get Supabase public key for JWT verification
-SUPABASE_JWT_SECRET = settings.supabase_service_key.split(".")[-1] if "." in settings.supabase_service_key else ""
 
 
 async def verify_user_token(authorization: str = Header(None)) -> str:
@@ -33,7 +31,12 @@ async def verify_user_token(authorization: str = Header(None)) -> str:
     try:
         # Decode JWT token without verification first to get the payload
         # JWT format: header.payload.signature
-        payload_part = token.split(".")[1]
+        token_parts = token.split(".")
+        if len(token_parts) != 3:
+            logger.error(f"Token has {len(token_parts)} parts instead of 3")
+            raise ValueError(f"Invalid JWT format: expected 3 parts, got {len(token_parts)}")
+
+        payload_part = token_parts[1]
 
         # Add padding if needed
         padding = 4 - len(payload_part) % 4
@@ -49,23 +52,28 @@ async def verify_user_token(authorization: str = Header(None)) -> str:
         user_id = payload.get("sub")
 
         if not user_id:
-            logger.warning(f"Token missing 'sub' claim: {payload.get('aud')}")
+            logger.error(f"Token missing 'sub' claim. Payload keys: {list(payload.keys())}")
             raise HTTPException(status_code=401, detail="Invalid token: missing user ID")
 
         # Basic validation: check expiry if present
         if "exp" in payload:
             import time
-            if payload["exp"] < time.time():
+            current_time = time.time()
+            exp_time = payload["exp"]
+            if exp_time < current_time:
+                logger.warning(f"Token expired. exp={exp_time}, now={current_time}")
                 raise HTTPException(status_code=401, detail="Token expired")
 
-        logger.debug(f"User authenticated: {user_id[:8]}...")
+        logger.info(f"✅ User authenticated: {user_id[:8]}... (email: {payload.get('email', 'unknown')})")
         return user_id
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.warning(f"Token verification failed: {str(e)[:100]}")
-        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)[:50]}")
+        import traceback
+        logger.error(f"❌ Token verification failed: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=401, detail=f"Invalid token: {type(e).__name__}: {str(e)[:50]}")
 
 
 async def verify_briefing_api_key(authorization: str = Header(None)) -> bool:
