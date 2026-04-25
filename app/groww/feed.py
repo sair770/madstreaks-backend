@@ -7,7 +7,7 @@ from app.groww.client import groww_client
 class FeedManager:
     def __init__(self, alert_manager):
         self.groww = groww_client
-        self.feed = GrowwFeed(self.groww.api)
+        self.feed = None
         self.alert_manager = alert_manager
         self.is_running = False
         self.task = None
@@ -19,6 +19,10 @@ class FeedManager:
 
     async def _run(self):
         try:
+            if self.feed is None:
+                self.feed = GrowwFeed(self.groww.api)
+                logger.info("GrowwFeed initialized")
+
             symbols = await self.alert_manager.get_active_symbols()
             if not symbols:
                 logger.warning("No active symbols to monitor")

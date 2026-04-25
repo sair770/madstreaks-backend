@@ -1,8 +1,8 @@
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-python-telegram-bot==21.0.1
-growwapi==0.1.0
-supabase==2.0.2
-python-dotenv==1.0.0
-pydantic-settings==2.1.0
-httpx==0.25.2
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+python-telegram-bot>=21.0
+growwapi>=1.5.0
+supabase>=2.0
+python-dotenv>=1.0
+pydantic-settings>=2.0
+httpx>=0.24

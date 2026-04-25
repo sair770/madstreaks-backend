@@ -1,0 +1,30 @@
+INFO:     Will watch for changes in these directories: ['/Users/sairam/madstreaks-backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [80659] using WatchFiles
+2026-04-25 15:20:14,983 — app.config — INFO — Supabase client initialized
+Ready to Groww!
+2026-04-25 15:20:15,370 — app.config — INFO — Groww API client initialized
+2026-04-25 15:20:15,440 — app.config — INFO — Telegram bot initialized
+INFO:     Started server process [80662]
+INFO:     Waiting for application startup.
+2026-04-25 15:20:15,454 — app.config — INFO — 🚀 Starting madstreaks-backend
+2026-04-25 15:20:15,454 — app.config — INFO — Starting Telegram bot polling
+2026-04-25 15:20:15,933 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/getMe "HTTP/1.1 200 OK"
+2026-04-25 15:20:15,935 — telegram.ext.Application — INFO — Application started
+2026-04-25 15:20:16,096 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/deleteWebhook "HTTP/1.1 200 OK"
+2026-04-25 15:20:16,097 — app.config — INFO — ✅ Telegram bot started
+2026-04-25 15:20:16,098 — app.config — INFO — Starting Groww feed manager
+2026-04-25 15:20:16,098 — app.config — INFO — ✅ Groww feed started
+2026-04-25 15:20:16,271 — app.config — ERROR — Error in feed loop: Cannot run the event loop while another loop is running
+/Users/sairam/madstreaks-backend/app/groww/feed.py:47: RuntimeWarning: coroutine 'NatsClient._connect' was never awaited
+  self.is_running = False
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+INFO:     Application startup complete.
+2026-04-25 15:20:18,668 — httpx — INFO — HTTP Request: GET https://nrppxfdspgsjuthahbju.supabase.co/rest/v1/watchlist_alerts?select=%2A&is_active=eq.True "HTTP/2 200 OK"
+INFO:     127.0.0.1:51310 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51340 - "GET / HTTP/1.1" 200 OK
+2026-04-25 15:20:25,222 — httpx — INFO — HTTP Request: GET https://nrppxfdspgsjuthahbju.supabase.co/rest/v1/watchlist_alerts?select=%2A&is_active=eq.True "HTTP/2 200 OK"
+INFO:     127.0.0.1:51341 - "GET /watchlist HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51343 - "HEAD /docs HTTP/1.1" 200 OK
+2026-04-25 15:20:26,750 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/getUpdates "HTTP/1.1 200 OK"
+2026-04-25 15:20:36,911 — httpx — INFO — HTTP Request: POST https://api.telegram.org/bot8187586820:AAH28EHkFSacLGxvAFTU0zbTNlyj83lTgZo/getUpdates "HTTP/1.1 200 OK"
