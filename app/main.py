@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -12,6 +12,8 @@ from app.watchlist.manager import AlertManager
 from app.watchlist.notifier import Notifier
 from app.signals.generator import SignalGenerator
 from app.groww.orders import place_order, get_positions
+from app.schemas import TradeCreate, TradeUpdate, AlertCreate, AlertUpdate, BriefingAlert
+from app.auth import verify_user_token, verify_briefing_api_key
 
 
 notifier = Notifier(telegram_bot)
@@ -48,7 +50,11 @@ app = FastAPI(title="Madstreaks Backend", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080", "http://localhost:3000", "https://*.vercel.app"],
+    allow_origins=[
+        "http://localhost:8080",
+        "http://localhost:3000",
+        "https://madstreaks.vercel.app",  # TODO: Update with your exact domain
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -138,13 +144,19 @@ async def list_trades(user_id: str = None):
 
 
 @app.post("/trades")
-async def create_trade(trade_data: dict):
+async def create_trade(
+    trade: TradeCreate,
+    user_id: str = Depends(verify_user_token)
+):
     try:
+        trade_data = trade.dict()
+        trade_data["user_id"] = user_id
         db.client.table("trades").insert(trade_data).execute()
+        logger.info(f"Trade created for user {user_id}: {trade.symbol}")
         return {"status": "created"}
     except Exception as e:
         logger.error(f"Error creating trade: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to create trade")
 
 
 @app.get("/trades/{trade_id}")
@@ -158,13 +170,19 @@ async def get_trade(trade_id: str):
 
 
 @app.put("/trades/{trade_id}")
-async def update_trade(trade_id: str, updates: dict):
+async def update_trade(
+    trade_id: str,
+    updates: TradeUpdate,
+    user_id: str = Depends(verify_user_token)
+):
     try:
-        db.client.table("trades").update(updates).eq("id", trade_id).execute()
+        update_data = updates.dict(exclude_unset=True)
+        db.client.table("trades").update(update_data).eq("id", trade_id).eq("user_id", user_id).execute()
+        logger.info(f"Trade updated for user {user_id}: {trade_id}")
         return {"status": "updated"}
     except Exception as e:
         logger.error(f"Error updating trade: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to update trade")
 
 
 @app.delete("/trades/{trade_id}")
@@ -209,14 +227,20 @@ async def list_alerts(user_id: str = None, active_only: bool = True):
 
 
 @app.post("/alerts")
-async def create_alert(alert_data: dict):
+async def create_alert(
+    alert: AlertCreate,
+    user_id: str = Depends(verify_user_token)
+):
     try:
+        alert_data = alert.dict()
+        alert_data["user_id"] = user_id
         db.client.table("watchlist_alerts").insert(alert_data).execute()
         await feed_manager.refresh_symbols()
+        logger.info(f"Alert created for user {user_id}: {alert.symbol}")
         return {"status": "created"}
     except Exception as e:
         logger.error(f"Error creating alert: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to create alert")
 
 
 @app.get("/alerts/{alert_id}")
@@ -284,9 +308,9 @@ async def toggle_alert(alert_id: str):
 
 @app.post("/alerts/from-briefing")
 async def create_alerts_from_briefing(
-    alerts_data: list[dict],
+    alerts_data: list[BriefingAlert],
     user_id: str = "2d620133-08e5-49c1-ae8b-94e85adf29b1",
-    authorization: str = Header(None)
+    authenticated: bool = Depends(verify_briefing_api_key)
 ):
     """
     Create multiple alerts from briefing research.
@@ -299,7 +323,7 @@ async def create_alerts_from_briefing(
     [
         {
             "symbol": "NIFTY",
-            "alert_type": "above",          # above, below, pct_change
+            "alert_type": "above",
             "target_price": 24500,
             "description": "Breakout level",
             "notes": "Expected to reach 25000 if breakout confirmed"
@@ -307,59 +331,33 @@ async def create_alerts_from_briefing(
         ...
     ]
     """
-    # Validate API key
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
-
-    # Extract token from "Bearer sk-briefing-xxx"
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0] != "Bearer":
-        raise HTTPException(status_code=401, detail="Invalid Authorization format. Use: Bearer <api-key>")
-
-    api_key = parts[1]
-    if api_key != settings.briefing_api_key:
-        logger.warning(f"Invalid briefing API key attempted: {api_key[:10]}...")
-        raise HTTPException(status_code=403, detail="Invalid API key")
-
     logger.info(f"Briefing API authenticated - creating {len(alerts_data)} alerts")
 
     try:
         created = []
         skipped = []
 
-        for alert_data in alerts_data:
-            symbol = alert_data.get("symbol")
-            alert_type = alert_data.get("alert_type")
-            target_price = alert_data.get("target_price")
-            description = alert_data.get("description", "")
-            notes = alert_data.get("notes", "")
-
-            # Validate required fields
-            if not all([symbol, alert_type, target_price is not None]):
-                skipped.append({"alert": alert_data, "reason": "missing required fields"})
-                continue
-
-            if alert_type not in ["above", "below", "pct_change"]:
-                skipped.append({"alert": alert_data, "reason": f"invalid alert_type: {alert_type}"})
-                continue
-
-            # Create alert in Supabase
+        for alert in alerts_data:
             try:
                 alert_record = {
                     "user_id": user_id,
-                    "symbol": symbol,
-                    "alert_type": alert_type,
-                    "target_price": float(target_price),
+                    "symbol": alert.symbol,
+                    "alert_type": alert.alert_type,
+                    "target_price": alert.target_price,
                     "is_active": True,
                     "notify_telegram": True,
                     "repeat_mode": "one_shot",
-                    "notes": f"{description} — {notes}" if description else notes,
+                    "notes": f"{alert.description} — {alert.notes}" if alert.description else alert.notes,
                 }
                 db.client.table("watchlist_alerts").insert(alert_record).execute()
-                created.append({"symbol": symbol, "alert_type": alert_type, "target_price": target_price})
-                logger.info(f"Alert created from briefing: {symbol} {alert_type} {target_price}")
+                created.append({
+                    "symbol": alert.symbol,
+                    "alert_type": alert.alert_type,
+                    "target_price": alert.target_price
+                })
+                logger.info(f"Alert created from briefing: {alert.symbol} {alert.alert_type} {alert.target_price}")
             except Exception as e:
-                skipped.append({"alert": alert_data, "reason": str(e)})
+                skipped.append({"alert": alert.dict(), "reason": str(e)})
 
         # Refresh feed with new symbols
         if created:
@@ -373,7 +371,7 @@ async def create_alerts_from_briefing(
         }
     except Exception as e:
         logger.error(f"Error creating alerts from briefing: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to create alerts from briefing")
 
 
 if __name__ == "__main__":
