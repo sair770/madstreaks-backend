@@ -126,10 +126,15 @@ async def backend_login(credentials: LoginRequest):
 
         if hasattr(response, 'user') and response.user:
             user = response.user
+            # Get JWT token from session
+            token = None
+            if hasattr(response, 'session') and response.session:
+                token = response.session.access_token
             return {
                 "status": "success",
                 "user_id": user.id,
                 "email": user.email,
+                "access_token": token,
                 "message": "Login successful"
             }
         else:
