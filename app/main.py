@@ -14,6 +14,7 @@ from app.signals.generator import SignalGenerator
 from app.groww.orders import place_order, get_positions
 from app.schemas import TradeCreate, TradeUpdate, AlertCreate, AlertUpdate, BriefingAlert, LoginRequest
 from app.auth import verify_user_token, verify_briefing_api_key
+from supabase import create_client
 
 
 notifier = Notifier(telegram_bot)
@@ -47,6 +48,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Madstreaks Backend", version="1.0.0", lifespan=lifespan)
+
+
+def get_authenticated_db(auth_token: str):
+    """Create a Supabase client with authenticated user's JWT token in Authorization header"""
+    # Use anon key for client creation, but set auth header with JWT token
+    auth_db = create_client(settings.supabase_url, settings.supabase_publishable_key or "anon-key")
+    # Override the default auth header with the JWT token
+    auth_db.postgrest.auth(auth_token)
+    return auth_db
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -126,10 +137,12 @@ async def backend_login(credentials: LoginRequest):
 
         if hasattr(response, 'user') and response.user:
             user = response.user
-            # Get JWT token from session
-            token = getattr(response.session, 'access_token', None) if response.session else None
+            # Extract JWT token from session
+            token = None
+            if response.session:
+                token = response.session.access_token
 
-            logger.info(f"Login successful for {user.email}")
+            logger.info(f"Login successful for {user.email} - Token: {token[:20] if token else 'None'}...")
 
             return {
                 "status": "success",
@@ -236,12 +249,21 @@ async def list_trades(user_id: str = None):
 @app.post("/trades")
 async def create_trade(
     trade: TradeCreate,
-    user_id: str = Depends(verify_user_token)
+    user_id: str = Depends(verify_user_token),
+    authorization: str = Header(None)
 ):
     try:
         trade_data = trade.dict()
         trade_data["user_id"] = user_id
-        db.client.table("trades").insert(trade_data).execute()
+
+        # Use authenticated client if token provided, otherwise use service key
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.replace("Bearer ", "")
+            auth_db = get_authenticated_db(token)
+            auth_db.table("trades").insert(trade_data).execute()
+        else:
+            db.client.table("trades").insert(trade_data).execute()
+
         logger.info(f"Trade created for user {user_id}: {trade.symbol}")
 
         # Send notification to trades ops group
@@ -329,12 +351,21 @@ async def list_alerts(user_id: str = None, active_only: bool = True):
 @app.post("/alerts")
 async def create_alert(
     alert: AlertCreate,
-    user_id: str = Depends(verify_user_token)
+    user_id: str = Depends(verify_user_token),
+    authorization: str = Header(None)
 ):
     try:
         alert_data = alert.dict()
         alert_data["user_id"] = user_id
-        db.client.table("watchlist_alerts").insert(alert_data).execute()
+
+        # Use authenticated client if token provided, otherwise use service key
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.replace("Bearer ", "")
+            auth_db = get_authenticated_db(token)
+            auth_db.table("watchlist_alerts").insert(alert_data).execute()
+        else:
+            db.client.table("watchlist_alerts").insert(alert_data).execute()
+
         await feed_manager.refresh_symbols()
         logger.info(f"Alert created for user {user_id}: {alert.symbol}")
 
