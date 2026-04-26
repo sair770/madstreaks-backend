@@ -249,20 +249,14 @@ async def list_trades(user_id: str = None):
 @app.post("/trades")
 async def create_trade(
     trade: TradeCreate,
-    user_id: str = Depends(verify_user_token),
-    authorization: str = Header(None)
+    user_id: str = Depends(verify_user_token)
 ):
     try:
         trade_data = trade.dict()
         trade_data["user_id"] = user_id
 
-        # Use authenticated client if token provided, otherwise use service key
-        if authorization and authorization.startswith("Bearer "):
-            token = authorization.replace("Bearer ", "")
-            auth_db = get_authenticated_db(token)
-            auth_db.table("trades").insert(trade_data).execute()
-        else:
-            db.client.table("trades").insert(trade_data).execute()
+        # Use SERVICE_KEY (already verified user_id via JWT token)
+        db.client.table("trades").insert(trade_data).execute()
 
         logger.info(f"Trade created for user {user_id}: {trade.symbol}")
 
@@ -351,20 +345,14 @@ async def list_alerts(user_id: str = None, active_only: bool = True):
 @app.post("/alerts")
 async def create_alert(
     alert: AlertCreate,
-    user_id: str = Depends(verify_user_token),
-    authorization: str = Header(None)
+    user_id: str = Depends(verify_user_token)
 ):
     try:
         alert_data = alert.dict()
         alert_data["user_id"] = user_id
 
-        # Use authenticated client if token provided, otherwise use service key
-        if authorization and authorization.startswith("Bearer "):
-            token = authorization.replace("Bearer ", "")
-            auth_db = get_authenticated_db(token)
-            auth_db.table("watchlist_alerts").insert(alert_data).execute()
-        else:
-            db.client.table("watchlist_alerts").insert(alert_data).execute()
+        # Use SERVICE_KEY (already verified user_id via JWT token)
+        db.client.table("watchlist_alerts").insert(alert_data).execute()
 
         await feed_manager.refresh_symbols()
         logger.info(f"Alert created for user {user_id}: {alert.symbol}")
