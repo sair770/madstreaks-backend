@@ -5,6 +5,8 @@ from app.config import settings, logger
 
 class GrowwClient:
     def __init__(self):
+        self.api = None
+        self.authenticated = False
         try:
             # Get access token using API key + secret
             token_response = GrowwAPI.get_access_token(
@@ -25,12 +27,15 @@ class GrowwClient:
 
             # Initialize API with access token
             self.api = GrowwAPI(access_token)
+            self.authenticated = True
             logger.info("✅ Groww API authenticated")
         except Exception as e:
-            logger.error(f"❌ Failed to authenticate with Groww: {e}")
-            raise
+            logger.error(f"⚠️  Groww authentication failed (non-blocking): {e}")
+            logger.info("Server will run without Groww integration")
 
     async def get_ltp(self, symbol: str) -> float | None:
+        if not self.authenticated:
+            return None
         try:
             data = self.api.get_quote(symbol)
             if isinstance(data, dict):
@@ -41,6 +46,9 @@ class GrowwClient:
             return None
 
     async def place_order(self, symbol: str, qty: int, price: float, order_type: str = "BUY") -> dict | None:
+        if not self.authenticated:
+            logger.warning("Cannot place order: Groww not authenticated")
+            return None
         try:
             response = self.api.place_order(
                 symbol=symbol,
@@ -55,6 +63,8 @@ class GrowwClient:
             return None
 
     async def get_positions(self) -> list:
+        if not self.authenticated:
+            return []
         try:
             return self.api.get_positions()
         except Exception as e:
@@ -62,6 +72,9 @@ class GrowwClient:
             return []
 
     async def cancel_order(self, order_id: str) -> bool:
+        if not self.authenticated:
+            logger.warning("Cannot cancel order: Groww not authenticated")
+            return False
         try:
             self.api.cancel_order(order_id)
             logger.info(f"Order cancelled: {order_id}")

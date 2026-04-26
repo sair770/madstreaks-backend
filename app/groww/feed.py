@@ -15,6 +15,9 @@ class FeedManager:
         self.task = None
 
     async def start(self):
+        if not self.groww.authenticated:
+            logger.warning("⚠️  Groww not authenticated — feed monitoring disabled")
+            return
         logger.info("Starting Groww live feed")
         self.is_running = True
         self.task = asyncio.create_task(self._run())
