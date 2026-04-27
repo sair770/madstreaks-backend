@@ -32,8 +32,9 @@ class FeedManager:
 
     async def _delayed_start(self, delay: int):
         """Retry feed start after delay (for rate limit recovery)"""
+        logger.warning(f"Feed start scheduled to retry in {delay}s (waiting for Groww rate limit reset)")
         await asyncio.sleep(delay)
-        logger.info(f"Retrying Groww feed after {delay}s delay...")
+        logger.info(f"🔄 Retrying Groww feed after {delay}s delay...")
         await self.start()
 
     async def _run(self):
