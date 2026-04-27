@@ -15,12 +15,26 @@ class FeedManager:
         self.task = None
 
     async def start(self):
-        if not self.groww.authenticated:
-            logger.warning("⚠️  Groww not authenticated — feed monitoring disabled")
-            return
         logger.info("Starting Groww live feed")
+        # Lazy authenticate if not already done
+        if not self.groww.authenticated:
+            logger.info("Attempting Groww authentication for feed startup...")
+            self.groww._authenticate_with_retry()
+
+        if not self.groww.authenticated:
+            logger.warning("⚠️  Groww not authenticated — scheduling retry in 30s...")
+            # Schedule a retry in 30 seconds
+            asyncio.create_task(self._delayed_start(30))
+            return
+
         self.is_running = True
         self.task = asyncio.create_task(self._run())
+
+    async def _delayed_start(self, delay: int):
+        """Retry feed start after delay (for rate limit recovery)"""
+        await asyncio.sleep(delay)
+        logger.info(f"Retrying Groww feed after {delay}s delay...")
+        await self.start()
 
     async def _run(self):
         try:

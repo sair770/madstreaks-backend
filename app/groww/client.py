@@ -10,7 +10,7 @@ class GrowwClient:
         self.api = None
         self.authenticated = False
         self.token_cache = GrowwTokenCache()
-        self._authenticate_with_retry()
+        # Lazy authentication: only auth when feed starts, not at module load
 
     def _authenticate_with_retry(self, max_retries: int = 3):
         """Authenticate with exponential backoff on rate limit errors"""
