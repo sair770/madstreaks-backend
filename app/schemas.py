@@ -37,6 +37,7 @@ class AlertCreate(BaseModel):
     base_price: Optional[float] = Field(None, gt=0)
     is_active: Optional[bool] = Field(True)
     notify_telegram: Optional[bool] = Field(True)
+    notify_groww: Optional[bool] = Field(False)
     repeat_mode: Optional[str] = Field("one_shot", pattern="^(one_shot|repeating)$")
     notes: Optional[str] = Field(None, max_length=500)
 
