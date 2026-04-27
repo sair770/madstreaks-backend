@@ -8,13 +8,26 @@ from typing import Optional
 
 class TradeCreate(BaseModel):
     symbol: str = Field(..., min_length=1, max_length=20)
+    trade_datetime: Optional[str] = None
+    spot_price: Optional[float] = Field(None, gt=0)
+    direction: Optional[str] = None  # Bullish, Bearish, Neutral
+    daily_bias: Optional[str] = None
+    pattern: Optional[str] = None
+    execution_timeframe: Optional[str] = None
     entry_price: float = Field(..., gt=0)
+    initial_stop_loss: Optional[float] = Field(None, gt=0)
+    buy_strike: Optional[float] = None
+    sell_strike: Optional[float] = None
+    net_premium: Optional[float] = None
+    psychology_notes: Optional[str] = None
+    general_notes: Optional[str] = None
+    # Legacy/Optional fields for compatibility
     target_price: Optional[float] = Field(None, gt=0)
     stop_loss: Optional[float] = Field(None, gt=0)
-    quantity: int = Field(..., gt=0)
+    quantity: Optional[int] = Field(None, gt=0)
     trade_type: Optional[str] = Field("long", pattern="^(long|short)$")
     status: Optional[str] = Field("pending", pattern="^(pending|open|closed)$")
-    notes: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = Field(None, max_length=2000)
 
 
 class TradeUpdate(BaseModel):
