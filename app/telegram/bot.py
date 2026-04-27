@@ -13,6 +13,7 @@ class TelegramBot:
         self.app = Application.builder().token(self.token).build()
         self._setup_handlers()
         self.task = None
+        self.polling_active = False
         logger.info("Telegram bot initialized")
 
     def _setup_handlers(self):
@@ -24,19 +25,44 @@ class TelegramBot:
         self.app.add_handler(CommandHandler("status", cmd_status))
 
     async def start(self):
+        if self.polling_active:
+            logger.warning("Telegram bot polling already active, skipping restart")
+            return
+
         logger.info("Starting Telegram bot polling")
-        await self.app.initialize()
-        await self.app.start()
-        await self.app.updater.start_polling()
+        self.polling_active = True
+        try:
+            await self.app.initialize()
+            await self.app.start()
+            # allow_recovery=True: continue polling on 409 Conflict errors
+            await self.app.updater.start_polling(allowed_updates=None, drop_pending_updates=True)
+        except Exception as e:
+            if "409" in str(e) or "Conflict" in str(e):
+                logger.error(f"⚠️  Telegram 409 Conflict: bot already polling elsewhere. Disabling polling.")
+                self.polling_active = False
+                # Continue running without polling — message sending still works
+            else:
+                logger.error(f"Telegram bot error: {e}")
+                self.polling_active = False
 
     async def stop(self):
         logger.info("Stopping Telegram bot")
-        await self.app.updater.stop()
-        await self.app.stop()
-        await self.app.shutdown()
+        self.polling_active = False
+        try:
+            await self.app.updater.stop()
+        except Exception as e:
+            logger.warning(f"Updater stop error: {e}")
+        try:
+            await self.app.stop()
+        except Exception as e:
+            logger.warning(f"App stop error: {e}")
+        try:
+            await self.app.shutdown()
+        except Exception as e:
+            logger.warning(f"App shutdown error: {e}")
 
     async def send_alert(self, symbol: str, alert_type: str, price: float, target: float):
-        """Send triggered alert to alerts group"""
+        """Send triggered alert to alerts group (works independent of polling)"""
         try:
             message = f"🚨 Alert: {symbol} {alert_type} {target}\n📍 Current: {price}"
             bot = Bot(token=self.token)
@@ -44,9 +70,9 @@ class TelegramBot:
                 chat_id=settings.telegram_alerts_group_id,
                 text=message
             )
-            logger.info(f"Alert sent to alerts group: {symbol} {alert_type}")
+            logger.info(f"✅ Alert sent to alerts group: {symbol} {alert_type}")
         except Exception as e:
-            logger.error(f"Error sending alert: {e}")
+            logger.error(f"❌ Error sending alert: {e}")
 
     async def send_to_personal_chat(self, message: str):
         """Send message to personal chat"""
@@ -61,7 +87,7 @@ class TelegramBot:
             logger.error(f"Error sending to personal chat: {e}")
 
     async def send_trade_notification(self, symbol: str, entry_price: float, trade_type: str, target: float = None, stop_loss: float = None):
-        """Send new trade notification to trades ops group"""
+        """Send new trade notification to trades ops group (works independent of polling)"""
         try:
             message = f"📈 New Trade: {symbol}\n"
             message += f"Type: {trade_type.upper()}\n"
@@ -77,12 +103,12 @@ class TelegramBot:
                 chat_id=settings.telegram_trades_group_id,
                 text=message
             )
-            logger.info(f"Trade notification sent: {symbol}")
+            logger.info(f"✅ Trade notification sent: {symbol}")
         except Exception as e:
-            logger.error(f"Error sending trade notification: {e}")
+            logger.error(f"❌ Error sending trade notification: {e}")
 
     async def send_alert_notification(self, symbol: str, alert_type: str, target_price: float):
-        """Send new watchlist alert notification to trades ops group"""
+        """Send new watchlist alert notification to trades ops group (works independent of polling)"""
         try:
             message = f"⏰ New Watchlist Alert\n"
             message += f"Symbol: {symbol}\n"
@@ -95,9 +121,9 @@ class TelegramBot:
                 chat_id=settings.telegram_trades_group_id,
                 text=message
             )
-            logger.info(f"Alert notification sent: {symbol}")
+            logger.info(f"✅ Alert notification sent: {symbol}")
         except Exception as e:
-            logger.error(f"Error sending alert notification: {e}")
+            logger.error(f"❌ Error sending alert notification: {e}")
 
     async def send_signal(self, signal_text: str):
         try:
