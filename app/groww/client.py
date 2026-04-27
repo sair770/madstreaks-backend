@@ -1,37 +1,70 @@
 import pyotp
+import time
 from growwapi import GrowwAPI
 from app.config import settings, logger
+from app.groww.token_cache import GrowwTokenCache
 
 
 class GrowwClient:
     def __init__(self):
         self.api = None
         self.authenticated = False
-        try:
-            # Get access token using API key + secret
-            token_response = GrowwAPI.get_access_token(
-                api_key=settings.groww_api_key,
-                secret=settings.groww_api_secret
-            )
+        self.token_cache = GrowwTokenCache()
+        self._authenticate_with_retry()
 
-            # token_response can be dict or string
-            if isinstance(token_response, dict):
-                access_token = token_response.get("access_token")
-            else:
-                access_token = token_response
+    def _authenticate_with_retry(self, max_retries: int = 3):
+        """Authenticate with exponential backoff on rate limit errors"""
+        retry_delay = 1  # Start with 1 second
 
-            if not access_token:
-                raise ValueError(f"No access token in response: {token_response}")
+        for attempt in range(max_retries):
+            try:
+                # Try to get cached token first
+                cached_token = self.token_cache.get_cached_token()
+                if cached_token:
+                    logger.info("Using cached Groww access token")
+                    access_token = cached_token
+                else:
+                    # Get fresh access token using API key + secret
+                    logger.info(f"Fetching new Groww access token (attempt {attempt + 1}/{max_retries})")
+                    token_response = GrowwAPI.get_access_token(
+                        api_key=settings.groww_api_key,
+                        secret=settings.groww_api_secret
+                    )
 
-            logger.info("Got access token from Groww")
+                    # token_response can be dict or string
+                    if isinstance(token_response, dict):
+                        access_token = token_response.get("access_token")
+                    else:
+                        access_token = token_response
 
-            # Initialize API with access token
-            self.api = GrowwAPI(access_token)
-            self.authenticated = True
-            logger.info("✅ Groww API authenticated")
-        except Exception as e:
-            logger.error(f"⚠️  Groww authentication failed (non-blocking): {e}")
-            logger.info("Server will run without Groww integration")
+                    if not access_token:
+                        raise ValueError(f"No access token in response: {token_response}")
+
+                    # Save to cache
+                    self.token_cache.save_token(access_token)
+                    logger.info("Got new access token from Groww (cached)")
+
+                # Initialize API with access token
+                self.api = GrowwAPI(access_token)
+                self.authenticated = True
+                logger.info("✅ Groww API authenticated")
+                return
+
+            except Exception as e:
+                error_msg = str(e).lower()
+                is_rate_limit = "429" in error_msg or "rate limit" in error_msg
+
+                if is_rate_limit and attempt < max_retries - 1:
+                    logger.warning(f"⚠️  Groww rate limit hit, retrying in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logger.error(f"⚠️  Groww authentication failed (non-blocking): {e}")
+                    if is_rate_limit:
+                        logger.info("Rate limit exceeded, clearing cache for next retry")
+                        self.token_cache.clear_cache()
+                    logger.info("Server will run without Groww integration")
+                    return
 
     async def get_ltp(self, symbol: str) -> float | None:
         if not self.authenticated:
