@@ -201,6 +201,20 @@ async def refresh_watchlist():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/feed/restart")
+async def restart_feed():
+    """Manual endpoint to restart Groww feed (useful after rate limit recovery)"""
+    try:
+        logger.info("Manual feed restart requested")
+        await feed_manager.stop()
+        await asyncio.sleep(1)
+        await feed_manager.start()
+        return {"status": "feed restarted", "feed_running": feed_manager.is_running}
+    except Exception as e:
+        logger.error(f"Error restarting feed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/positions")
 async def get_open_positions():
     try:
